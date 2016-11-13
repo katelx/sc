@@ -26,33 +26,6 @@ data Op =
   Out W |
   Noop deriving (Show)
 
-createOp :: W -> W -> Op
-createOp addr code = case code of
-    0 -> Halt
-    1 -> Set a b
-    2 -> Push a
-    3 -> Pop a
-    4 -> Eq a b c
-    5 -> Gt a b c
-    6 -> Jmp a
-    7 -> Jt a b
-    8 -> Jf a b
-    9 -> Add a b c
-    10 -> Mul a b c
-    11 -> Mod a b c
-    12 -> And a b c
-    13 -> Or a b c
-    14 -> Not a b
-    15 -> Rmem a b
-    16 -> Wmem a b
-    17 -> Call a
-    18 -> Ret
-    19 -> Out a
-    _ -> Noop
-    where a = addr + 1
-          b = a + 1
-          c = b + 1
-
 sizeOp :: Op -> W
 sizeOp op = case op of
   (Set _ _) -> 3
