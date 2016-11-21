@@ -24,6 +24,7 @@ data Op =
   Call W |
   Ret |
   Out W |
+  In |
   Noop deriving (Show)
 
 sizeOp :: Op -> W

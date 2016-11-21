@@ -17,6 +17,7 @@ run p = do
   unless (term op) (action p op >>= run)
 
 term Halt = True
+term In = True
 term _ = False
 
 action p (Set a b) = writeMemAddr p a b >>= nextAddr
@@ -57,9 +58,11 @@ action p Ret = peekStack p >>= \a -> popStack p >>= \pa -> action pa (Jmp a)
 
 action p (Out a) = (putChar . chr . fromIntegral $ a) >> nextAddr p 
 
+--action p (In a) = 
+
 action p Noop = nextAddr p
 
-actionBinaryCalcSet p a b c calc = writeMemAddr p a (rem (calc b c) 32768) >>= nextAddr
+actionBinaryCalcSet p a b c calc = writeMemAddr p a (rem (calc b c) reg0) >>= nextAddr
 
 decode = do
   empty <- isEmpty
@@ -73,6 +76,6 @@ load mem _ [] = return mem
 load mem addr (op:ops) = unsafeWrite mem addr op >> load mem (addr+1) ops
 
 main = do
-  arr <- newArray (0, 65535) 0 :: IO (IOUArray Word16 Word16)
+  arr <- newArray (0, memSize) 0 :: IO (IOUArray Word16 Word16)
   pmem <- runGet decode <$> B.readFile "challenge.bin" >>= load arr 0
   run $ Proc { mem = pmem, stack = [], addr = 0 }

@@ -6,6 +6,12 @@ import Solution.Ops
 
 data Proc = Proc { mem :: IOUArray W W, stack :: [W], addr :: W }
 
+reg0 :: W
+reg0 = 32768
+
+memSize :: W
+memSize = reg0 + 8
+
 nextAddr :: Proc -> IO Proc
 nextAddr p = createOp p >>= \op -> return p { addr = addr p + sizeOp op }
 
@@ -28,7 +34,7 @@ readMemAddr :: Proc -> W -> IO W
 readMemAddr p a = unsafeRead (mem p) (fromIntegral a)
 
 readRegAddr :: Proc -> W -> IO W
-readRegAddr p a = readMemAddr p a >>= \v -> if v < 32768 then return v else readMemAddr p v
+readRegAddr p a = readMemAddr p a >>= \v -> if v < reg0 then return v else readMemAddr p v
 
 writeMemAddr :: Proc -> W -> W -> IO Proc
 writeMemAddr p a v = unsafeWrite (mem p) (fromIntegral a) v >> return p
@@ -45,14 +51,14 @@ createOp p = do
   rc <- readRegAddr p $ offset + 3
   return $ case code of
     0 -> Halt
-    1 -> Set a b
+    1 -> Set a rb
     2 -> Push ra
     3 -> Pop a
     4 -> Eq a rb rc
     5 -> Gt a rb rc
-    6 -> Jmp ra
-    7 -> Jt ra rb
-    8 -> Jf ra rb
+    6 -> Jmp a
+    7 -> Jt ra b
+    8 -> Jf ra b
     9 -> Add a rb rc
     10 -> Mul a rb rc
     11 -> Mod a rb rc
@@ -63,5 +69,6 @@ createOp p = do
     16 -> Wmem ra rb
     17 -> Call ra
     18 -> Ret
-    19 -> Out a
+    19 -> Out ra
+    20 -> In
     _ -> Noop
