@@ -70,5 +70,5 @@ createOp p = do
     17 -> Call ra
     18 -> Ret
     19 -> Out ra
-    20 -> In
+    20 -> In a
     _ -> Noop

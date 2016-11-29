@@ -24,7 +24,7 @@ data Op =
   Call W |
   Ret |
   Out W |
-  In |
+  In W |
   Noop deriving (Show)
 
 sizeOp :: Op -> W
@@ -48,5 +48,6 @@ sizeOp op = case op of
   (Call _) -> 2
   (Ret) -> 1
   (Out _) -> 2
+  (In _) -> 2
   _ -> 1
 

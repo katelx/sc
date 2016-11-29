@@ -10,14 +10,14 @@ import Data.Array.Base
 import Data.Bits
 import Solution.Ops
 import Solution.Procs
+import System.IO
 
 run p = do
   op <- createOp p
-  trace (show op) (return ())
+--  trace (show op) (return ())
   unless (term op) (action p op >>= run)
 
 term Halt = True
-term In = True
 term _ = False
 
 action p (Set a b) = writeMemAddr p a b >>= nextAddr
@@ -56,9 +56,9 @@ action p op@(Call a) = pushStack p (addr p + sizeOp op) >>= \pa -> action pa (Jm
 
 action p Ret = peekStack p >>= \a -> popStack p >>= \pa -> action pa (Jmp a)
 
-action p (Out a) = (putChar . chr . fromIntegral $ a) >> nextAddr p 
+action p (Out a) = (putChar . chr . fromIntegral $ a) >> hFlush stdout >> nextAddr p 
 
---action p (In a) = 
+action p (In a) = getChar >>= writeMemAddr p a . fromIntegral . ord >>= nextAddr
 
 action p Noop = nextAddr p
 
