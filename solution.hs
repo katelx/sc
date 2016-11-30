@@ -8,13 +8,10 @@ import Data.Char
 import Data.Array.IO
 import Data.Array.Base
 import Data.Bits
-import Solution.Ops
-import Solution.Procs
 import System.IO
 
 run p = do
   op <- createOp p
---  trace (show op) (return ())
   unless (term op) (action p op >>= run)
 
 term Halt = True
@@ -79,3 +76,122 @@ main = do
   arr <- newArray (0, memSize) 0 :: IO (IOUArray Word16 Word16)
   pmem <- runGet decode <$> B.readFile "challenge.bin" >>= load arr 0
   run $ Proc { mem = pmem, stack = [], addr = 0 }
+
+type W = Word16
+
+data Op =
+  Halt |
+  Set W W |
+  Push W |
+  Pop W |
+  Eq W W W |
+  Gt W W W |
+  Jmp W |
+  Jt W W |
+  Jf W W |
+  Add W W W |
+  Mul W W W |
+  Mod W W W |
+  And W W W |
+  Or W W W |
+  Not W W |
+  Rmem W W |
+  Wmem W W |
+  Call W |
+  Ret |
+  Out W |
+  In W |
+  Noop deriving (Show)
+
+sizeOp :: Op -> W
+sizeOp op = case op of
+  (Set _ _) -> 3
+  (Push _) -> 2
+  (Pop _) -> 2
+  (Eq _ _ _) -> 4
+  (Gt _ _ _) -> 4
+  (Jmp _) -> 2
+  (Jt _ _) -> 3
+  (Jf _ _) -> 3 
+  (Add _ _ _) -> 4
+  (Mul _ _ _) -> 4
+  (Mod _ _ _) -> 4
+  (And _ _ _) -> 4
+  (Or _ _ _) -> 4
+  (Not _ _) -> 3
+  (Rmem _ _) -> 3
+  (Wmem _ _) -> 3
+  (Call _) -> 2
+  (Ret) -> 1
+  (Out _) -> 2
+  (In _) -> 2
+  _ -> 1
+
+data Proc = Proc { mem :: IOUArray W W, stack :: [W], addr :: W }
+
+reg0 :: W
+reg0 = 32768
+
+memSize :: W
+memSize = reg0 + 8
+
+nextAddr :: Proc -> IO Proc
+nextAddr p = createOp p >>= \op -> return p { addr = addr p + sizeOp op }
+
+jmpAddr :: Proc -> W -> IO Proc
+jmpAddr p j = return p { addr = j }
+
+pushStack :: Proc -> W -> IO Proc
+pushStack p a = return p { stack = a:stack p }
+
+peekStack :: Proc -> IO W
+peekStack = return . head . stack
+
+popStack :: Proc -> IO Proc
+popStack p = return p { stack = tail . stack $ p }
+
+readMem :: Proc -> IO W
+readMem p = readMemAddr p (addr p)
+
+readMemAddr :: Proc -> W -> IO W
+readMemAddr p a = unsafeRead (mem p) (fromIntegral a)
+
+readRegAddr :: Proc -> W -> IO W
+readRegAddr p a = readMemAddr p a >>= \v -> if v < reg0 then return v else readMemAddr p v
+
+writeMemAddr :: Proc -> W -> W -> IO Proc
+writeMemAddr p a v = unsafeWrite (mem p) (fromIntegral a) v >> return p
+
+createOp :: Proc -> IO Op
+createOp p = do
+  let offset = addr p
+  code <- readMemAddr p $ offset
+  a <- readMemAddr p $ offset + 1
+  b <- readMemAddr p $ offset + 2
+  c <- readMemAddr p $ offset + 3
+  ra <- readRegAddr p $ offset + 1
+  rb <- readRegAddr p $ offset + 2
+  rc <- readRegAddr p $ offset + 3
+  return $ case code of
+    0 -> Halt
+    1 -> Set a rb
+    2 -> Push ra
+    3 -> Pop a
+    4 -> Eq a rb rc
+    5 -> Gt a rb rc
+    6 -> Jmp a
+    7 -> Jt ra b
+    8 -> Jf ra b
+    9 -> Add a rb rc
+    10 -> Mul a rb rc
+    11 -> Mod a rb rc
+    12 -> And a rb rc
+    13 -> Or a rb rc
+    14 -> Not a rb
+    15 -> Rmem a rb
+    16 -> Wmem ra rb
+    17 -> Call ra
+    18 -> Ret
+    19 -> Out ra
+    20 -> In a
+    _ -> Noop
